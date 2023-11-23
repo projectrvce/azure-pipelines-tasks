@@ -13,7 +13,7 @@ import * as telemetry from "azure-pipelines-tasks-utility-common/telemetry";
 import INuGetCommandOptions from "azure-pipelines-tasks-packaging-common/nuget/INuGetCommandOptions2";
 import * as vstsNuGetPushToolRunner from "./Common/VstsNuGetPushToolRunner";
 import * as vstsNuGetPushToolUtilities from "./Common/VstsNuGetPushToolUtilities";
-import { getProjectAndFeedIdFromInputParam } from 'azure-pipelines-tasks-packaging-common/util';
+import { getProjectAndFeedIdFromInputParam, getAccessToken, PackageToolType } from 'azure-pipelines-tasks-packaging-common/util';
 import { logError } from 'azure-pipelines-tasks-packaging-common/util';
 
 class PublishOptions implements INuGetCommandOptions {
@@ -103,7 +103,7 @@ export async function run(nuGetPath: string): Promise<void> {
         }
 
         // Setting up auth info
-        const accessToken = pkgLocationUtils.getSystemAccessToken();
+        const accessToken = getAccessToken(nugetFeedType, 'externalEndpoint', 'feedPublish', PackageToolType.NuGetCommand);
         const quirks = await ngToolRunner.getNuGetQuirksAsync(nuGetPath);
 
         // Clauses ordered in this way to avoid short-circuit evaluation, so the debug info printed by the functions

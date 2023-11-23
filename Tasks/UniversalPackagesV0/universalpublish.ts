@@ -5,7 +5,7 @@ import { ProvenanceHelper } from "azure-pipelines-tasks-packaging-common/provena
 import * as artifactToolRunner from "azure-pipelines-tasks-packaging-common/universal/ArtifactToolRunner";
 import * as artifactToolUtilities from "azure-pipelines-tasks-packaging-common/universal/ArtifactToolUtilities";
 import * as auth from "azure-pipelines-tasks-packaging-common/universal/Authentication";
-import { getProjectAndFeedIdFromInputParam, logError } from 'azure-pipelines-tasks-packaging-common/util';
+import { getProjectAndFeedIdFromInputParam, logError, getAccessToken, PackageToolType } from 'azure-pipelines-tasks-packaging-common/util';
 import * as telemetry from "azure-pipelines-tasks-utility-common/telemetry";
 
 const packageAlreadyExistsError = 17;
@@ -259,7 +259,7 @@ function authSetup(
         projectId = feedProject.projectId;
 
         // Setting up auth info
-        accessToken = pkgLocationUtils.getSystemAccessToken();
+        accessToken = getAccessToken(feedType, 'externalEndpoints', 'feedListPublish', PackageToolType.UniversalPackages);
     }
 
     else {
