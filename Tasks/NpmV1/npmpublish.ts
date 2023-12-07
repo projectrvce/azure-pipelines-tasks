@@ -35,13 +35,7 @@ export async function getPublishRegistry(packagingLocation: PackagingLocation): 
         case RegistryLocation.Feed:
             tl.debug(tl.loc('PublishFeed'));
             const feed = util.getProjectAndFeedIdFromInputParam(NpmTaskInput.PublishFeed);
-            npmRegistry = util.isUserAccessTokenRequired(feed.feedId) ? await getNpmRegistry(packagingLocation.DefaultPackagingUri, feed, false, true) : await NpmRegistry.FromFeedId
-            (
-                packagingLocation.DefaultPackagingUri,
-                feed.feedId,
-                feed.projectId,
-                false /* authOnly */,
-                true /* useSession */);
+            npmRegistry = await getNpmRegistry(packagingLocation.DefaultPackagingUri, feed, false, true);
             break;
         case RegistryLocation.External:
             tl.debug(tl.loc('PublishExternal'));
