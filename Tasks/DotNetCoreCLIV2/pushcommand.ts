@@ -9,7 +9,7 @@ import { IExecOptions } from 'azure-pipelines-task-lib/toolrunner';
 import { NuGetConfigHelper2 } from 'azure-pipelines-tasks-packaging-common/nuget/NuGetConfigHelper2';
 import * as ngRunner from 'azure-pipelines-tasks-packaging-common/nuget/NuGetToolRunner2';
 import * as pkgLocationUtils from 'azure-pipelines-tasks-packaging-common/locationUtilities';
-import { getProjectAndFeedIdFromInputParam, logError } from 'azure-pipelines-tasks-packaging-common/util';
+import { getProjectAndFeedIdFromInputParam, logError, getAccessToken, PackageToolType } from 'azure-pipelines-tasks-packaging-common/util';
 
 export async function run(): Promise<void> {
     let packagingLocation: pkgLocationUtils.PackagingLocation;
@@ -65,7 +65,7 @@ export async function run(): Promise<void> {
         }
 
         // Setting up auth info
-        const accessToken = pkgLocationUtils.getSystemAccessToken();
+        const accessToken = getAccessToken(nugetFeedType, 'externalEndpoint', 'feedPublish', PackageToolType.DotNetCoreCLI);
         const isInternalFeed: boolean = nugetFeedType === 'internal';
         const internalAuthInfo = new auth.InternalAuthInfo(urlPrefixes, accessToken, /*useCredProvider*/ null, true);
 
