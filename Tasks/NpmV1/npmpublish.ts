@@ -5,7 +5,9 @@ import { INpmRegistry, NpmRegistry } from 'azure-pipelines-tasks-packaging-commo
 import { NpmToolRunner } from './npmtoolrunner';
 import * as util from 'azure-pipelines-tasks-packaging-common/util';
 import * as npmutil from 'azure-pipelines-tasks-packaging-common/npm/npmutil';
-import { PackagingLocation } from 'azure-pipelines-tasks-packaging-common/locationUtilities';
+import * as npmrcparser from 'azure-pipelines-tasks-packaging-common/npm/npmrcparser';
+import { PackagingLocation, getFeedRegistryUrl, RegistryType } from 'azure-pipelines-tasks-packaging-common/locationUtilities';
+import * as os from 'os';
 
 export async function run(packagingLocation: PackagingLocation): Promise<void> {
     const workingDir = tl.getInput(NpmTaskInput.WorkingDir) || process.cwd();
@@ -33,7 +35,8 @@ export async function getPublishRegistry(packagingLocation: PackagingLocation): 
         case RegistryLocation.Feed:
             tl.debug(tl.loc('PublishFeed'));
             const feed = util.getProjectAndFeedIdFromInputParam(NpmTaskInput.PublishFeed);
-            npmRegistry = await NpmRegistry.FromFeedId(
+            npmRegistry = util.isUserAccessTokenRequired(feed.feedId) ? await getNpmRegistry(packagingLocation.DefaultPackagingUri, feed, false, true) : await NpmRegistry.FromFeedId
+            (
                 packagingLocation.DefaultPackagingUri,
                 feed.feedId,
                 feed.projectId,
@@ -47,4 +50,45 @@ export async function getPublishRegistry(packagingLocation: PackagingLocation): 
             break;
     }
     return npmRegistry;
+}
+
+async function getNpmRegistry(defaultPackagingUri: string, feed: any, authOnly?: boolean, useSession?: boolean) {
+    const lineEnd = os.EOL;
+    let url: string;
+    let nerfed: string;
+    let auth: string;
+    let username: string;
+    let email: string;
+    let password64: string;
+    let accessToken: string;
+
+    url = npmrcparser.NormalizeRegistry( await getFeedRegistryUrl(defaultPackagingUri, RegistryType.npm, feed.feedId, feed.project, null, useSession));
+    nerfed = util.toNerfDart(url);
+    
+    let endpointName: string = tl.getInput('publishEndpoint');
+
+    if(endpointName){
+        tl.debug('Checking if the endpoint ${endpointName} provided by user, can be used.');
+        accessToken = getAccessTokenFromServiceConnectionForInternalFeeds(endpointName);
+    } else {
+        tl.debug('Checking if the credentials are set in the environment.');
+        accessToken = getAccessTokenFromEnvironmentForInternalFeeds(feed, util.PackageToolType.Npm);
+    }
+
+    if(!accessToken){
+        tl.warning('Access token not set. Using System Access token.');
+        accessToken = pkgLocationUtils.getSystemAccessToken();
+    }
+
+    // Azure DevOps does not support PATs+Bearer only JWTs+Bearer
+    email = 'VssEmail';
+    username = 'VssToken';
+    password64 = Buffer.from(apitoken).toString('base64');
+    tl.setSecret(password64);
+
+    auth = nerfed + ':username=' + username + lineEnd;
+    auth += nerfed + ':_password=' + password64 + lineEnd;
+    auth += nerfed + ':email=' + email + lineEnd;
+
+    return new NpmRegistry(url, auth, authOnly);
 }

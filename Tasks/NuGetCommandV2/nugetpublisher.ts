@@ -14,7 +14,7 @@ import INuGetCommandOptions from "azure-pipelines-tasks-packaging-common/nuget/I
 import * as vstsNuGetPushToolRunner from "./Common/VstsNuGetPushToolRunner";
 import * as vstsNuGetPushToolUtilities from "./Common/VstsNuGetPushToolUtilities";
 import { getProjectAndFeedIdFromInputParam } from 'azure-pipelines-tasks-packaging-common/util';
-import { logError } from 'azure-pipelines-tasks-packaging-common/util';
+import { logError, getAccessTokenFromEnvironmentForInternalFeeds, getAccessTokenFromServiceConnectionForInternalFeeds } from 'azure-pipelines-tasks-packaging-common/util';
 
 class PublishOptions implements INuGetCommandOptions {
     constructor(
@@ -103,7 +103,21 @@ export async function run(nuGetPath: string): Promise<void> {
         }
 
         // Setting up auth info
-        const accessToken = pkgLocationUtils.getSystemAccessToken();
+        let endpointName: string = tl.getInput('externalEndpoints');
+        let feed = getProjectAndFeedIdFromInputParam('feedPublish');
+        let accessToken = "";
+        if(endpointName){
+            tl.debug('Checking if the endpoint ${endpointName} provided by user, can be used.');
+            accessToken = getAccessTokenFromServiceConnectionForInternalFeeds(endpointName);
+        } else {
+            tl.debug('Checking if the credentials are set in the environment.');
+            accessToken = getAccessTokenFromEnvironmentForInternalFeeds(feed, PackageToolType.NuGetCommand);
+        }
+        if(!accessToken){
+            tl.warning('Access token not set. Using System Access token.');
+            accessToken = pkgLocationUtils.getSystemAccessToken();
+        }
+        
         const quirks = await ngToolRunner.getNuGetQuirksAsync(nuGetPath);
 
         // Clauses ordered in this way to avoid short-circuit evaluation, so the debug info printed by the functions
