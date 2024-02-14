@@ -35,13 +35,7 @@ export async function getPublishRegistry(packagingLocation: PackagingLocation): 
         case RegistryLocation.Feed:
             tl.debug(tl.loc('PublishFeed'));
             const feed = util.getProjectAndFeedIdFromInputParam(NpmTaskInput.PublishFeed);
-            npmRegistry = util.isUserAccessTokenRequired(feed.feedId) ? await getNpmRegistry(packagingLocation.DefaultPackagingUri, feed, false, true) : await NpmRegistry.FromFeedId
-            (
-                packagingLocation.DefaultPackagingUri,
-                feed.feedId,
-                feed.projectId,
-                false /* authOnly */,
-                true /* useSession */);
+            npmRegistry = await getNpmRegistry(packagingLocation.DefaultPackagingUri, feed, false, true);
             break;
         case RegistryLocation.External:
             tl.debug(tl.loc('PublishExternal'));
@@ -64,22 +58,8 @@ async function getNpmRegistry(defaultPackagingUri: string, feed: any, authOnly?:
 
     url = npmrcparser.NormalizeRegistry( await getFeedRegistryUrl(defaultPackagingUri, RegistryType.npm, feed.feedId, feed.project, null, useSession));
     nerfed = util.toNerfDart(url);
-    
-    let endpointName: string = tl.getInput('publishEndpoint');
 
-    if(endpointName){
-        tl.debug('Checking if the endpoint ${endpointName} provided by user, can be used.');
-        accessToken = getAccessTokenFromServiceConnectionForInternalFeeds(endpointName);
-    } else {
-        tl.debug('Checking if the credentials are set in the environment.');
-        accessToken = getAccessTokenFromEnvironmentForInternalFeeds(feed, util.PackageToolType.Npm);
-    }
-
-    if(!accessToken){
-        tl.warning('Access token not set. Using System Access token.');
-        accessToken = pkgLocationUtils.getSystemAccessToken();
-    }
-
+    const apitoken = util.getAccessToken('publishEndpoint', 'publishFeed');
     // Azure DevOps does not support PATs+Bearer only JWTs+Bearer
     email = 'VssEmail';
     username = 'VssToken';

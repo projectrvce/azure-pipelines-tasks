@@ -9,7 +9,7 @@ import { IExecOptions } from 'azure-pipelines-task-lib/toolrunner';
 import { NuGetConfigHelper2 } from 'azure-pipelines-tasks-packaging-common/nuget/NuGetConfigHelper2';
 import * as ngRunner from 'azure-pipelines-tasks-packaging-common/nuget/NuGetToolRunner2';
 import * as pkgLocationUtils from 'azure-pipelines-tasks-packaging-common/locationUtilities';
-import { getProjectAndFeedIdFromInputParam, logError, getAccessTokenFromEnvironmentForInternalFeeds, getAccessTokenFromServiceConnectionForInternalFeeds } from 'azure-pipelines-tasks-packaging-common/util';
+import { getProjectAndFeedIdFromInputParam, logError } from 'azure-pipelines-tasks-packaging-common/util';
 
 export async function run(): Promise<void> {
     let packagingLocation: pkgLocationUtils.PackagingLocation;
@@ -64,6 +64,16 @@ export async function run(): Promise<void> {
             tl.debug(`all URL prefixes: ${urlPrefixes}`);
         }
 
+        // Setting up auth info
+        let accessToken: string;
+        const isInternalFeed: boolean = nugetFeedType === "internal";
+        if (isInternalFeed){
+            accessToken = getAccessToken('externalEndpoint', 'feedPublish');
+        }
+        else{
+            accessToken = pkgLocationUtils.getSystemAccessToken();
+        }
+
         let configFile = null;
         let apiKey: string;
         let credCleanup = () => { return; };
@@ -80,25 +90,10 @@ export async function run(): Promise<void> {
         let authInfo: auth.NuGetExtendedAuthInfo;
         let nuGetConfigHelper: NuGetConfigHelper2;
 
-        let accessToken: string = "";
-        let endpointName: string = tl.getInput('externalEndpoint');
         let feed = getProjectAndFeedIdFromInputParam('feedPublish');
 
         // If a feed is specified, we are publishing to an internal feed. Try either service connection or env variables 
         if(feed){
-            if(endpointName){
-                tl.debug('Checking if the endpoint ${endpointName} provided by user, can be used.');
-                accessToken = getAccessTokenFromServiceConnectionForInternalFeeds(endpointName);
-            } else {
-                tl.debug('Checking if the credentials are set in the environment.');
-                accessToken = getAccessTokenFromEnvironmentForInternalFeeds(feed, PackageToolType.NuGetCommand);
-            }
-
-            if(!accessToken){
-                tl.warning('Access token not set. Using System Access token.');
-                accessToken = pkgLocationUtils.getSystemAccessToken();
-            }
-
             const internalAuthInfo = new auth.InternalAuthInfo(urlPrefixes, accessToken, /*useCredProvider*/ null, true);
 
             authInfo = new auth.NuGetExtendedAuthInfo(internalAuthInfo);

@@ -5,7 +5,7 @@ import { ProvenanceHelper } from "azure-pipelines-tasks-packaging-common/provena
 import * as artifactToolRunner from "azure-pipelines-tasks-packaging-common/universal/ArtifactToolRunner";
 import * as artifactToolUtilities from "azure-pipelines-tasks-packaging-common/universal/ArtifactToolUtilities";
 import * as auth from "azure-pipelines-tasks-packaging-common/universal/Authentication";
-import { getProjectAndFeedIdFromInputParam, logError, getAccessTokenFromEnvironmentForInternalFeeds, getAccessTokenFromServiceConnectionForInternalFeeds } from 'azure-pipelines-tasks-packaging-common/util';
+import { getProjectAndFeedIdFromInputParam, logError } from 'azure-pipelines-tasks-packaging-common/util';
 import * as telemetry from "azure-pipelines-tasks-utility-common/telemetry";
 
 const packageAlreadyExistsError = 17;
@@ -258,23 +258,8 @@ function authSetup(
         feedId = feedProject.feedId;
         projectId = feedProject.projectId;
 
-        let feed = getProjectAndFeedIdFromInputParam('feedListPublish');
-        let endpointName: string = tl.getInput('externalEndpoint');
-
-        // Setting up auth info
-        if(endpointName){
-            tl.debug('Checking if the endpoint ${endpointName} provided by user, can be used.');
-            accessToken = getAccessTokenFromServiceConnectionForInternalFeeds(endpointName);
-        } else {
-        // If endpoint is not set up 
-            tl.debug('Checking if the credentials are set in the environment.');
-            accessToken = getAccessTokenFromEnvironmentForInternalFeeds(feed, PackageToolType.UniversalPackages);
-        }
-
-        if(!accessToken){
-            tl.warning('Access token not set. Using System Access token.');
-            accessToken = pkgLocationUtils.getSystemAccessToken();
-        }    }
+        accessToken = getAccessToken('externalEndpoint', 'feedListPublish'); 
+    }
 
     else {
         const externalAuthInfo = auth.GetExternalAuthInfo("externalEndpoints");
