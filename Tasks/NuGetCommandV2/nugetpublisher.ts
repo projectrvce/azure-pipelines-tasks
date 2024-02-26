@@ -36,6 +36,12 @@ interface IVstsNuGetPushOptions {
     settings: vstsNuGetPushToolRunner.VstsNuGetPushSettings;
 }
 
+interface EndpointCredentials {
+    endpoint: string;
+    username?: string;
+    password: string;
+}
+
 export async function run(nuGetPath: string): Promise<void> {
     let packagingLocation: pkgLocationUtils.PackagingLocation;
     try {
@@ -103,12 +109,48 @@ export async function run(nuGetPath: string): Promise<void> {
         }
 
         // Setting up auth info
-        let accessToken = "";
+        let accessToken;
+        let feed;
         const isInternalFeed: boolean = nugetFeedType === "internal";
-        if (isInternalFeed){
-            accessToken = getAccessToken('externalEndpoint', 'feedPublish');
+        let endpoint = tl.getInput('externalEndpoint', false);
+
+        if(endpoint && isInternalFeed === true) {
+            tl.debug("Found external endpoint, will try use token for auth");
+            let endpointAuth = tl.getEndpointAuthorization(endpoint, true);
+            let endpointScheme = tl.getEndpointAuthorizationScheme(endpoint, true).toLowerCase();
+            switch(endpointScheme)
+            {
+                case ("token"):
+                    accessToken = endpointAuth.parameters["apitoken"];
+                    tl.debug('let token:' + accessToken)
+                    break;
+                default:
+                    tl.warning("Invalid authentication type for internal feed. Use token based authentication.");
+                    break;
+            }
         }
-        else{
+        if(!accessToken && isInternalFeed === true)
+        {            
+            const feed = getProjectAndFeedIdFromInputParam('feedPublish');
+            const JsonEndpointsString = process.env["VSS_NUGET_EXTERNAL_FEED_ENDPOINTS"];
+            if (JsonEndpointsString) {
+                tl.debug(`Endpoints found: ${JsonEndpointsString}`);
+
+                let endpointsArray: { endpointCredentials: EndpointCredentials[] } = JSON.parse(JsonEndpointsString);
+                tl.debug(`Feed details ${feed.feedId} ${feed.projectId}`);
+
+                for (let endpoint_in = 0; endpoint_in < endpointsArray.endpointCredentials.length; endpoint_in++) {
+                    if (endpointsArray.endpointCredentials[endpoint_in].endpoint.search(feed.feedName) != -1) {
+                        tl.debug(`Endpoint Credentials found for ${feed.feedName}`);
+                        accessToken = endpointsArray.endpointCredentials[endpoint_in].password;
+                        break;
+                    }
+                }
+            }
+        }
+        if(!accessToken)
+        {
+            tl.debug('Defaulting to use the System Access Token.');
             accessToken = pkgLocationUtils.getSystemAccessToken();
         }
 
@@ -143,7 +185,6 @@ export async function run(nuGetPath: string): Promise<void> {
         let authInfo: auth.NuGetExtendedAuthInfo;
         let nuGetConfigHelper: NuGetConfigHelper2;
 
-        let feed = getProjectAndFeedIdFromInputParam('feedPublish');
         if (isInternalFeed)
         {
             authInfo = new auth.NuGetExtendedAuthInfo(internalAuthInfo);
