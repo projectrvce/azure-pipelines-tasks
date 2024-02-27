@@ -261,7 +261,7 @@ function authSetup(
         // Setting up auth info
         let endpoint = tl.getInput('externalEndpoints', false);
         if(endpoint) {
-            tl.debug("Found external endpoint, will use token for auth");
+            tl.debug("Found external endpoint, will try to use token for auth");
             let endpointAuth = tl.getEndpointAuthorization(endpoint, true);
             let endpointScheme = tl.getEndpointAuthorizationScheme(endpoint, true).toLowerCase();
             switch(endpointScheme)
@@ -276,7 +276,7 @@ function authSetup(
         }
         if(!accessToken)
         {           
-            tl.debug("Checking for auth from Cred Provider."); 
+            tl.debug("Checking for auth in environment variables."); 
             accessToken = process.env["UNIVERSAL_PUBLISH_PAT"];
         }
         if(!accessToken)
