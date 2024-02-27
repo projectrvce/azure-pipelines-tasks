@@ -115,14 +115,13 @@ export async function run(nuGetPath: string): Promise<void> {
         let endpoint = tl.getInput('externalEndpoint', false);
 
         if(endpoint && isInternalFeed === true) {
-            tl.debug("Found external endpoint, will try use token for auth");
+            tl.debug("Found external endpoint, will use token for auth");
             let endpointAuth = tl.getEndpointAuthorization(endpoint, true);
             let endpointScheme = tl.getEndpointAuthorizationScheme(endpoint, true).toLowerCase();
             switch(endpointScheme)
             {
                 case ("token"):
                     accessToken = endpointAuth.parameters["apitoken"];
-                    tl.debug('let token:' + accessToken)
                     break;
                 default:
                     tl.warning("Invalid authentication type for internal feed. Use token based authentication.");
@@ -130,7 +129,8 @@ export async function run(nuGetPath: string): Promise<void> {
             }
         }
         if(!accessToken && isInternalFeed === true)
-        {            
+        {           
+            tl.debug("Checking for auth from Cred Provider."); 
             const feed = getProjectAndFeedIdFromInputParam('feedPublish');
             const JsonEndpointsString = process.env["VSS_NUGET_EXTERNAL_FEED_ENDPOINTS"];
             if (JsonEndpointsString) {
