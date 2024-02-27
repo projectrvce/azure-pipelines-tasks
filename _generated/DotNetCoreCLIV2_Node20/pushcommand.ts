@@ -76,14 +76,13 @@ export async function run(): Promise<void> {
         const isInternalFeed: boolean = nugetFeedType === 'internal';
         let endpoint = tl.getInput('externalEndpoint', false);
         if(endpoint && isInternalFeed === true) {
-            tl.debug("Found external endpoint, will try use token for auth");
+            tl.debug("Found external endpoint, will use token for auth");
             let endpointAuth = tl.getEndpointAuthorization(endpoint, true);
             let endpointScheme = tl.getEndpointAuthorizationScheme(endpoint, true).toLowerCase();
             switch(endpointScheme)
             {
                 case ("token"):
                     accessToken = endpointAuth.parameters["apitoken"];
-                    tl.debug('let token:' + accessToken)
                     break;
                 default:
                     tl.warning("Invalid authentication type for internal feed. Use token based authentication.");
