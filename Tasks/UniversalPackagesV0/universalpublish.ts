@@ -258,7 +258,32 @@ function authSetup(
         feedId = feedProject.feedId;
         projectId = feedProject.projectId;
 
-        accessToken = getAccessToken('externalEndpoint', 'feedListPublish'); 
+        // Setting up auth info
+        let endpoint = tl.getInput('externalEndpoints', false);
+        if(endpoint) {
+            tl.debug("Found external endpoint, will use token for auth");
+            let endpointAuth = tl.getEndpointAuthorization(endpoint, true);
+            let endpointScheme = tl.getEndpointAuthorizationScheme(endpoint, true).toLowerCase();
+            switch(endpointScheme)
+            {
+                case ("token"):
+                    accessToken = endpointAuth.parameters["apitoken"];
+                    break;
+                default:
+                    tl.warning("Invalid authentication type for internal feed. Use token based authentication.");
+                    break;
+            }
+        }
+        if(!accessToken)
+        {           
+            tl.debug("Checking for auth from Cred Provider."); 
+            accessToken = process.env["UNIVERSAL_PUBLISH_PAT"];
+        }
+        if(!accessToken)
+        {
+            tl.debug('Defaulting to use the System Access Token.');
+            accessToken = pkgLocationUtils.getSystemAccessToken();
+        }
     }
 
     else {
